@@ -4,7 +4,7 @@ const width = 900 - margin.left - margin.right;
 const height = 400 - margin.top - margin.bottom;
 
 // Create SVG containers for both charts
-const svg1_RENAME = d3.select("#lineChart1") // If you change this ID, you must change it in index.html too
+const svg1_line = d3.select("#lineChart1") // If you change this ID, you must change it in index.html too
     .append("svg")
     .attr("width", width + margin.left + margin.right)
     .attr("height", height + margin.top + margin.bottom)
@@ -23,8 +23,105 @@ const svg2_RENAME = d3.select("#lineChart2")
 
 // 2.a: LOAD...
 d3.csv("aircraft_incidents.csv").then(data => {
-    console.log(data)
-    // 2.b: ... AND TRANSFORM DATA
+
+
+    // REFORMAT DATA
+    data.forEach(d => {
+        d.year = new Date(d.Event_Date).getFullYear(); // Parse dates and get year
+        d.fatalities = +d.Total_Fatal_Injuries;
+    });
+    // Check reformated data 
+    console.log(data);
+
+    // GROUP DATA
+    const groupedData2 = d3.groups(data, d => d.year)
+        .map(([year, entries]) => ({
+            year, 
+            fatalities: d3.sum(entries, e => e.fatalities)
+        }));
+    // Check grouped data 
+    console.log(groupedData2);
+
+    // PIVOT DATA 
+    const pivotedData2 = groupedData2.flatMap(({ year, fatalities }) => [
+                {year, fatalities: fatalities}
+            ]);
+    // Check pivoted data 
+    console.log("Final pivoted data:", pivotedData2);
+
+    /*
+    const dataArrayLine = Array.from(pivotedData2,
+        ([year, fatalities]) => ({year, fatalities}))
+        .sort((a, b) => a.year - b.year)
+    ; 
+    // Check data array 
+    console.log(dataArrayLine);
+
+    */ 
+
+    let xYear = d3.scaleLinear()
+    .domain([1995, d3.max(pivotedData2, d => d.year)])
+    .range([0, width]); // START low, INCREASE
+        
+    
+    // 4.b: Y scale (Gross)
+    let yFatalilities = d3.scaleLinear()
+        .domain([0, d3.max(pivotedData2, d => d.fatalities)])
+        .range([height,0]); // START high, DECREASE
+
+    // 4.c: Define line generator for plotting line
+    const line = d3.line()
+        .x(d => xYear(d.year))
+        .y(d => yFatalilities(d.fatalities));
+
+    svg1_line.append("path")
+        .datum(pivotedData2)
+        .attr("d", line)
+        .attr("stroke", "blue")
+        .attr("stroke-width", 5)
+        .attr("fill", "none");
+
+     // 6: ADD AXES FOR LINE CHART
+    // 6.a: X-axis (Year)
+    svg1_line.append("g")
+        .attr("transform", `translate(0,${height})`)
+        .call(d3.axisBottom(xYear)
+            .tickFormat(d3.format("d")) // remove decimals
+    );
+
+
+    // 6.b: Y-axis (Gross)
+    svg1_line.append("g")
+        .call(d3.axisLeft(yFatalilities)
+    );
+
+    // 7: ADD LABELS FOR LINE CHART
+    // 7.a: Chart Title
+    // svg1_line.append("text")
+    //     .attr("class", "title")
+    //     .attr("x", (width / 2) - 10 )
+    //     .attr("y", -margin.top / 2)
+    //     .text("Fatalities (1995 - 2016)");
+
+
+    // 7.b: X-axis label (Year)
+    svg1_line.append("text")
+        .attr("class", "axis-label")
+        .attr("text-anchor", "middle")
+        .attr("x", width / 2)
+        .attr("y", height + (margin.bottom / 2) + 10)
+        .text("Year");
+
+    // 7.c: Y-axis label (Avg Gross)
+    svg1_line.append("text")
+        .attr("class", "axis-label")
+        .attr("transform", "rotate(-90)")
+        .attr("y", (-margin.left / 2) - 10 )
+        .attr("x", -height / 2)
+        .text("Fatalities");
+
+
+
 
     // 3.a: SET SCALES FOR CHART 1
 
