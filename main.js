@@ -11,7 +11,7 @@ const svg1_line = d3.select("#lineChart1") // If you change this ID, you must ch
     .append("g")
     .attr("transform", `translate(${margin.left},${margin.top})`);
 
-const svg2_RENAME = d3.select("#lineChart2")
+const svg2_bar = d3.select("#lineChart2")
     .append("svg")
     .attr("width", width + margin.left + margin.right)
     .attr("height", height + margin.top + margin.bottom)
@@ -29,6 +29,7 @@ d3.csv("aircraft_incidents.csv").then(data => {
     data.forEach(d => {
         d.year = new Date(d.Event_Date).getFullYear(); // Parse dates and get year
         d.fatalities = +d.Total_Fatal_Injuries;
+        d.make = d.make;
     });
     // Check reformated data 
     console.log(data);
@@ -136,14 +137,64 @@ d3.csv("aircraft_incidents.csv").then(data => {
 
 
     // 7.a: ADD INTERACTIVITY FOR CHART 1
-    
+     // // Tooltip
+     const tooltip = d3.select("body") // Create tooltip
+     .append("div")
+     .attr("class", "tooltip")
+     .style("position", "absolute")
+     .style("visibility", "hidden")
+     .style("background", "rgba(0, 0, 0, 0.7)")
+     .style("color", "white")
+     .style("padding", "10px")
+     .style("border-radius", "5px")
+     .style("font-size", "12px");
+
+ svg1_line.selectAll(".data-point") // Create tooltip events
+     .data(pivotedData2) 
+     .enter()
+     .append("circle")
+     .attr("class", "data-point")
+     .attr("cx", d => xYear(d.year))
+     .attr("cy", d => yFatalilities(d.fatalities))
+     .attr("r", 25)
+     .style("fill", "steelblue")
+     .style("opacity", 0)  // Make circles invisible by default
+     // --- MOUSEOVER ---
+     .on("mouseover", function(event, d) {
+         tooltip.style("visibility", "visible")
+             .html(`<strong>Year:</strong> ${d.year} <br><strong>Fatalities:</strong> ${d.fatalities}`)
+             .style("top", (event.pageY + 10) + "px") // Position relative to pointer
+             .style("left", (event.pageX + 10) + "px");
+
+         // Create the large circle at the hovered point
+         svg1_line.append("circle")
+             .attr("class", "hover-circle")
+             .attr("cx", xYear(d.year))  // Position based on the xScale (year)
+             .attr("cy", yFatalilities(d.fatalities)) // Position based on the yScale (fatalities)
+             .attr("r", 6)  // Radius of the large circle
+             .style("fill", "steelblue") // Circle color
+             .style("stroke-width", 2);
+     })
+     // --- MOUSEOUT ---
+     .on("mouseout", function() {
+         tooltip.style("visibility", "hidden");
+
+         // Remove the hover circle when mouseout occurs
+         svg1_line.selectAll(".hover-circle").remove();
+
+         // Make the circle invisible again
+         d3.select(this).style("opacity", 0);  // Reset opacity to 0 when not hovering
+     });
+
 
     // ==========================================
     //         CHART 2 (if applicable)
     // ==========================================
 
     // 3.b: SET SCALES FOR CHART 2
-
+        // 3.a Clean data
+    // 3. PREPARE DATA
+    // clean data 
 
     // 4.b: PLOT DATA FOR CHART 2
 
@@ -155,6 +206,5 @@ d3.csv("aircraft_incidents.csv").then(data => {
 
 
     // 7.b: ADD INTERACTIVITY FOR CHART 2
-
-
+   
 });
