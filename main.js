@@ -78,7 +78,7 @@ d3.csv("aircraft_incidents.csv").then(data => {
     svg1_line.append("path")
         .datum(pivotedData2)
         .attr("d", line)
-        .attr("stroke", "blue")
+        .attr("stroke", "steelblue")
         .attr("stroke-width", 5)
         .attr("fill", "none");
 
@@ -206,5 +206,6 @@ d3.csv("aircraft_incidents.csv").then(data => {
 
 
     // 7.b: ADD INTERACTIVITY FOR CHART 2
+
    
 });
