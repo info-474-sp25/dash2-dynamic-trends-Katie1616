@@ -29,7 +29,8 @@ d3.csv("aircraft_incidents.csv").then(data => {
     data.forEach(d => {
         d.year = new Date(d.Event_Date).getFullYear(); // Parse dates and get year
         d.fatalities = +d.Total_Fatal_Injuries;
-        d.make = d.make;
+        d.make = d.Make;
+        d.injury = d.Total_Serious_Injuries
     });
     // Check reformated data 
     console.log(data);
@@ -196,14 +197,117 @@ d3.csv("aircraft_incidents.csv").then(data => {
     // 3. PREPARE DATA
     // clean data 
 
+    const cleanBarData = data.filter(d =>
+        d.make != ''
+        && d.injury != 0
+    );
+
+    console.log("Clean bar data: ", cleanBarData);
+
+    // 3.b Group by [director] & aggregate [score]
+    const barMap = d3.rollup(cleanBarData
+        ,v => d3.sum(v, d => d.injury)
+        ,d => d.make
+    );
+
+    console.log(barMap)
+    
+    // 3.c Sort & get top 6
+    const barFinalArray = Array.from(barMap // conver to array
+        ,([make, injury]) => ({ make, injury })
+    );
+
+    console.log("Final bar data: ", barFinalArray);
+
+    // 4: SCALE AXES
+    // 4.a: x-axis (director)
+    let xMake = d3.scaleBand() // Use instead of scaleLinear() for bar charts
+        .domain(barFinalArray.map(d => d.make)) // Extract unique categories for x-axis
+        .range([0, width]) // START low, INCREASE
+        .padding(0.1); // Add space between bars
+
+    // 4.b: y-axis (score)
+    let yInjury = d3.scaleLinear()
+        .domain([0, d3.max(barFinalArray, d => d.injury)])
+        .range([height,0]); // START high, DECREASE
+
+
+    // 5: PLOT DATA
+    svg2_bar.selectAll("rect")
+        .data(barFinalArray)
+        .enter()
+        .append("rect")
+        .attr("x", d => xMake(d.make))
+        .attr("y", d => yInjury(d.injury))
+        .attr("width", xMake.bandwidth())
+        .attr("height", d => height - yInjury(d.injury))
+        .attr("fill", "steelblue")
+        ;
+    
+    svg2_bar.append("g") // x-axis
+        .attr("transform", `translate(0,${height})`)
+        .call(d3.axisBottom(xMake).tickFormat(d => d));
+
+
+
+    // 6: ADD AXES
+    // 6.a: x-axis
+
+
+
+
     // 4.b: PLOT DATA FOR CHART 2
+    svg2_bar.selectAll("rect")
+    .data(barFinalArray)
+    .enter()
+    .append("rect")
+    .attr("x", d => xMake(d.make))
+    .attr("y", d => yInjury(d.injury))
+    .attr("width", xMake.bandwidth())
+    .attr("height", d => height - yInjury(d.injury))
+    .attr("fill", "steelblue")
+    ;
+    svg2_bar.append("g") // x-axis
+    .attr("transform", `translate(0,${height})`)
+    .call(d3.axisBottom(xMake).tickFormat(d => d));
+
 
 
     // 5.b: ADD AXES FOR CHART 
 
+    
+
+    svg2_bar.append("g") // y-axis
+    .call(d3.axisLeft(yInjury));
+
+    svg2_bar.append("g")
+    .attr("transform", `translate(0,${height})`)
+    .call(d3.axisBottom(xMake));
+
+    // 6.b: y-axis
+    svg2_bar.append("g")
+    .call(d3.axisLeft(yInjury));
 
     // 6.b: ADD LABELS FOR CHART 2
+    // svg2_bar.append("text")
+    //     .attr("class", "title")
+    //     .attr("x", width / 2)
+    //     .attr("y", -margin.top / 2)
+    //     .text("Top 6 Director's IMDb Scores");
 
+     svg2_bar.append("text")
+        .attr("class", "axis-label")
+        .attr("x", width / 2)
+        .attr("y", height + (margin.bottom / 2) + 10)
+        .text("Manufacturers");
+
+
+    svg2_bar.append("text")
+        .attr("class", "axis-label")
+        .attr("transform", "rotate(-90)")
+        .attr("y", -margin.left / 2)
+        .attr("x", -height / 2)
+        .text("Number of Incidents");
 
     // 7.b: ADD INTERACTIVITY FOR CHART 2
 
