@@ -123,20 +123,6 @@ d3.csv("aircraft_incidents.csv").then(data => {
         .text("Fatalities");
 
 
-
-
-    // 3.a: SET SCALES FOR CHART 1
-
-
-    // 4.a: PLOT DATA FOR CHART 1
-
-
-    // 5.a: ADD AXES FOR CHART 1
-
-
-    // 6.a: ADD LABELS FOR CHART 1
-
-
     // 7.a: ADD INTERACTIVITY FOR CHART 1
      // // Tooltip
      const tooltip = d3.select("body") // Create tooltip
@@ -186,6 +172,67 @@ d3.csv("aircraft_incidents.csv").then(data => {
          // Make the circle invisible again
          d3.select(this).style("opacity", 0);  // Reset opacity to 0 when not hovering
      });
+
+
+        // T3.1: Function to calculate the linear regression (trendline)
+        function linearRegression(data) {
+            const n = data.length;
+            const sumX = d3.sum(data, d => d.year);
+            const sumY = d3.sum(data, d => d.fatalities);
+            const sumXY = d3.sum(data, d => d.year * d.fatalities);
+            const sumX2 = d3.sum(data, d => d.year * d.year);
+
+            // Calculate slope (m) and intercept (b)
+            const m = (n * sumXY - sumX * sumY) / (n * sumX2 - sumX * sumX);
+            const b = (sumY - m * sumX) / n;
+
+            // Generate points for the trendline
+            const trendlineData = data.map(d => ({
+                year: d.year,
+                fatalities: m * d.year + b
+            }));
+
+            return trendlineData;
+        };
+    
+        // T3.2: Function to draw the trendline if the checkbox is checked
+        function drawTrendline() {
+            // T3.3: Set-up data
+            // Filter data based on the selected category (D6.1: Make selected category dynamic)
+    
+            const trendlineData = linearRegression(pivotedData2);
+
+            // T2.4: Remove the previous trendline if it exists
+            svg1_line.selectAll(".trendline").remove();
+    
+            // T2.5: Draw trendline based on set-up data
+            svg1_line.append("path")
+                .data([trendlineData])
+                .attr("class", "trendline")
+                .attr("d", d3.line()
+                    .x(d => xYear(d.year))
+                    .y(d => yFatalilities(d.fatalities))
+                )
+                .attr("fill", "none")
+                .attr("stroke", "gray")
+                .attr("stroke-width", 2)
+                .attr("stroke-dasharray", "5,5");
+        }
+    
+        // T4: Manually draw trendline
+        d3.select("#trendline-toggle").on("change", function() {
+            // T5.2: Get whether the checkbox is checked
+            const isChecked = d3.select(this).property("checked");
+            // D6.2: Get the current selected category
+           // const selectedCategory = d3.select("#categorySelect").property("value");
+            // T5.3: Show or hide the trendline based on the checkbox state
+            if (isChecked) {
+                // D6.2: Draw the trendline for the selected category
+                drawTrendline(pivotedData2);
+            } else {
+                svg1_line.selectAll(".trendline").remove(); // Remove the trendline if the checkbox is unchecked
+            }
+        });
 
 
     // ==========================================

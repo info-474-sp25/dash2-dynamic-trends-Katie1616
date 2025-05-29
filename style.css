@@ -106,6 +106,35 @@ a:hover {
     text-anchor: middle;
 }
 
+
+/* Individual Widget */
+.widget {
+    flex: 1; /* Widgets take equal horizontal space */
+    min-width: 0; /* Prevent overflow issues */
+    text-align: center;
+}
+
+/* Dropdown container styling */
+.select-container {
+    position: relative; /* Enables positioning the caret */
+    display: inline-block;
+    width: 100%; /* Full width of the widget */
+}
+
+.select-container select {
+    width: 100%; /* Dropdown takes up full container width */
+    padding: 10px;
+    padding-right: 30px; /* Space for the caret */
+    font-size: 14px;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    background-color: #fff;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    appearance: none; /* Remove default browser styles */
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
 /* Responsive adjustments */
 @media (max-width: 768px) {
     .item {
