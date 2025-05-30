@@ -164,3 +164,15 @@ a:hover {
 }
 
 /* CSS generated with assistance from ChatGPT and DeepSeek. */
+
+
+.tooltip {
+    position: absolute;
+    background: rgba(0, 0, 0, 0.75);
+    color: white;
+    padding: 8px 12px;
+    border-radius: 5px;
+    font-size: 13px;
+    pointer-events: none;
+    z-index: 10;
+}
