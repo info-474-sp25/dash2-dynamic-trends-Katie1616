@@ -19,7 +19,17 @@ const svg2_bar = d3.select("#lineChart2")
     .attr("transform", `translate(${margin.left},${margin.top})`);
 
 // (If applicable) Tooltip element for interactivity
-// const tooltip = ...
+const tooltip = d3.select("body")
+    .append("div")
+    .attr("class", "tooltip")
+    .style("position", "absolute")
+    .style("visibility", "hidden")
+    .style("background", "rgba(0, 0, 0, 0.75)")
+    .style("color", "white")
+    .style("padding", "8px 12px")
+    .style("border-radius", "5px")
+    .style("font-size", "13px")
+    .style("pointer-events", "none");
 
 // 2.a: LOAD...
 d3.csv("aircraft_incidents.csv").then(data => {
@@ -357,6 +367,29 @@ d3.csv("aircraft_incidents.csv").then(data => {
         .text("Number of Incidents");
 
     // 7.b: ADD INTERACTIVITY FOR CHART 2
+    svg2_bar.selectAll(".bar") // Create tooltip events
+    .data(barFinalArray) 
+    .enter()
+    .append("rect")
+    .attr("class", "bar")
+    .attr("x", d => xMake(d.make))
+    .attr("y", d => yInjury(d.injury))
+    .attr("width", xMake.bandwidth())
+    .attr("height", d => height - yInjury(d.injury))
+    .style("fill", "steelblue")
+    // --- MOUSEOVER ---
+    .on("mouseover", function(event, d) {
+        tooltip.style("visibility", "visible")
+            .html(`<strong>Manufacturer:</strong> ${d.make} <br><strong>Injuries:</strong> ${d.injury}`)
+            .style("top", (event.pageY + 10) + "px") // Position relative to pointer
+            .style("left", (event.pageX + 10) + "px");
 
-   
+    })
+    // --- MOUSEOUT ---
+    .on("mouseout", function() {
+        tooltip.style("visibility", "hidden");
+
+        // Remove the hover circle when mouseout occurs
+        svg2_bar.selectAll(".hover-circle").remove();
+    });
 });
