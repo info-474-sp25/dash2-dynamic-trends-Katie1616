@@ -59,17 +59,8 @@ d3.csv("aircraft_incidents.csv").then(data => {
                 {year, fatalities: fatalities}
             ]);
     // Check pivoted data 
-    console.log("Final pivoted data:", pivotedData2);
+    //console.log("Final pivoted data:", pivotedData2);
 
-    /*
-    const dataArrayLine = Array.from(pivotedData2,
-        ([year, fatalities]) => ({year, fatalities}))
-        .sort((a, b) => a.year - b.year)
-    ; 
-    // Check data array 
-    console.log(dataArrayLine);
-
-    */ 
 
     let xYear = d3.scaleLinear()
     .domain([1995, d3.max(pivotedData2, d => d.year)])
@@ -101,20 +92,10 @@ d3.csv("aircraft_incidents.csv").then(data => {
             .tickFormat(d3.format("d")) // remove decimals
     );
 
-
     // 6.b: Y-axis (Gross)
     svg1_line.append("g")
         .call(d3.axisLeft(yFatalilities)
     );
-
-    // 7: ADD LABELS FOR LINE CHART
-    // 7.a: Chart Title
-    // svg1_line.append("text")
-    //     .attr("class", "title")
-    //     .attr("x", (width / 2) - 10 )
-    //     .attr("y", -margin.top / 2)
-    //     .text("Fatalities (1995 - 2016)");
-
 
     // 7.b: X-axis label (Year)
     svg1_line.append("text")
@@ -272,7 +253,7 @@ d3.csv("aircraft_incidents.csv").then(data => {
     // 3.c Sort & get top 6
     const barFinalArray = Array.from(barMap // conver to array
         ,([make, injury]) => ({ make, injury })
-    );
+    ).sort((b, a) => a.injury - b.injury);;
 
     console.log("Final bar data: ", barFinalArray);
 

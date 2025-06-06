@@ -54,42 +54,8 @@ d3.csv("aircraft_incidents.csv").then(data => {
         d => d.make 
     );
     
-    //console.log(pivotedData2)
-
-    // const pivotedData2 = Array.from(categories // conver to array
-    //     ,([make, year, fatalities]) => ({ make, year, fatalities })
-    // );
-
-    // const groupedData2 = Array.from(categories, ([make, years]) =>
-    //     Array.from(years, ([year, fatalities]) => ({
-    //         make,
-    //         year,
-    //         fatalities
-    //     }))
-    // );
-
-    // console.log(groupedData2)
-    // // GROUP DATA
-    // const groupedData2 = d3.groups(data, d => d.year)
-    //     .map(([year, entries]) => ({
-    //         year, 
-    //         fatalities: d3.sum(entries, e => e.fatalities)
-    //     }));
-    // // Check grouped data 
-    // console.log(groupedData2);
-
-    // // PIVOT DATA 
-    // const pivotedData2 = groupedData2.flatMap(({ make, year, fatalities }) => [
-    //             {make, year: year, fatalities: fatalities}
-    //         ]);
-    // // Check pivoted data 
-    // console.log("Final pivoted data:", pivotedData2);
-    const allYears = Array.from(categories.values())
-        .flatMap(yearMap => Array.from(yearMap.keys()));
     const yearCounts = Array.from(categories.values())
         .map(categoryMap => Array.from(categoryMap.values()));
-    const maxCount = d3.max(yearCounts, yearValues => d3.max(yearValues));
-
 
     const pivotedData2 = [];
     categories.forEach((yearMap, make) => {
@@ -98,12 +64,8 @@ d3.csv("aircraft_incidents.csv").then(data => {
         });
     });
 
-
-    // Filter to just STEM
     filteredFlattenedData = pivotedData2.filter(d => d.make === "Boeing");
     console.log(filteredFlattenedData);
-
-
 
     let xYear = d3.scaleLinear()
     .domain([1995, d3.max(filteredFlattenedData, d => d.year)])
@@ -120,14 +82,20 @@ d3.csv("aircraft_incidents.csv").then(data => {
         .x(d => xYear(d.year))
         .y(d => yFatalilities(d.fatalities));
 
-        
-    svg1_line.append("path.data-line")
-        .datum(filteredFlattenedData)
+
+    // Draw line with data()
+    svg1_line.selectAll('path.data-line') // Select all paths with the class 'line'
+        .data([filteredFlattenedData]) // Bind the entire lineData array as a single element
+        .enter()
+        .append("path")
         .attr("class", "data-line")
+        .attr("d", d3.line()
+                .x(d => xYear(d.year))
+                .y(d => yFatalilities(d.fatalities))
+        ) 
         .attr("stroke", "steelblue")
         .attr("stroke-width", 5)
         .attr("fill", "none");
-    
 
      // 6: ADD AXES FOR LINE CHART
     // 6.a: X-axis (Year)
@@ -137,20 +105,10 @@ d3.csv("aircraft_incidents.csv").then(data => {
             .tickFormat(d3.format("d")) // remove decimals
     );
 
-
     // 6.b: Y-axis (Gross)
     svg1_line.append("g")
         .call(d3.axisLeft(yFatalilities)
     );
-
-    // 7: ADD LABELS FOR LINE CHART
-    // 7.a: Chart Title
-    // svg1_line.append("text")
-    //     .attr("class", "title")
-    //     .attr("x", (width / 2) - 10 )
-    //     .attr("y", -margin.top / 2)
-    //     .text("Fatalities (1995 - 2016)");
-
 
     // 7.b: X-axis label (Year)
     svg1_line.append("text")
@@ -173,7 +131,7 @@ d3.csv("aircraft_incidents.csv").then(data => {
         // // Tooltip
         const tooltip = d3.select("body") // Create tooltip
         .append("div")
-        .attr("class", "tooltip")
+        .attr("class", "data-point")
         .style("position", "absolute")
         .style("visibility", "hidden")
         .style("background", "rgba(0, 0, 0, 0.7)")
@@ -182,16 +140,16 @@ d3.csv("aircraft_incidents.csv").then(data => {
         .style("border-radius", "5px")
         .style("font-size", "12px");
 
- svg1_line.selectAll(".data-point") // Create tooltip events
-     .data(pivotedData2) 
-     .enter()
-     .append("circle")
-     .attr("class", "data-point")
-     .attr("cx", d => xYear(d.year))
-     .attr("cy", d => yFatalilities(d.fatalities))
-     .attr("r", 25)
-     .style("fill", "steelblue")
-     .style("opacity", 0)  // Make circles invisible by default
+    svg1_line.selectAll(".data-point") // Create tooltip events
+        .data(filteredFlattenedData) 
+        .enter()
+        .append("circle")
+        .attr("class", "data-point")
+        .attr("cx", d => xYear(d.year))
+        .attr("cy", d => yFatalilities(d.fatalities))
+        .attr("r", 25)
+        .style("fill", "steelblue")
+        .style("opacity", 0)  // Make circles invisible by default
      // --- MOUSEOVER ---
      .on("mouseover", function(event, d) {
          tooltip.style("visibility", "visible")
@@ -265,9 +223,7 @@ d3.csv("aircraft_incidents.csv").then(data => {
                 .attr("fill", "none")
                 .attr("stroke", "gray")
                 .attr("stroke-width", 2)
-                .attr("stroke-dasharray", "5,5");
-
-                
+                .attr("stroke-dasharray", "5,5");     
         }
     
         function updateChart(selectedCategory) {
@@ -286,8 +242,6 @@ d3.csv("aircraft_incidents.csv").then(data => {
             
             // remove tooltip
             svg1_line.selectAll(".data-point").remove();
-
-
             
     
             // .4: Redraw lines
@@ -334,7 +288,7 @@ d3.csv("aircraft_incidents.csv").then(data => {
                     .attr("cx", xYear(d.year))  // Position based on the xScale (year)
                     .attr("cy", yFatalilities(d.fatalities)) // Position based on the yScale (count)
                     .attr("r", 6)  // Radius of the large circle
-                    .style("fill", "purple") // Circle color
+                    .style("fill", "steelblue") // Circle color
                     .style("stroke-width", 2);
             })
             // --- MOUSEOUT ---
@@ -349,10 +303,6 @@ d3.csv("aircraft_incidents.csv").then(data => {
             });
     
         }
-    
-        // D4: Set "STEM" as the default category when the page loads
-        //updateChart("Boeing");
-        // updateChart("Non-STEM"); // Try a different value as well
     
         
         // 5: EVENT LISTENERS
@@ -376,12 +326,8 @@ d3.csv("aircraft_incidents.csv").then(data => {
         d3.select("#categorySelect").on("change", function() {
             var selectedCategory = d3.select(this).property("value");
             updateChart(selectedCategory); // Update the chart based on the selected option
-        });  
+        });      
     
-    
-    
-    
-
 
     // ==========================================
     //         CHART 2 (if applicable)
@@ -397,20 +343,19 @@ d3.csv("aircraft_incidents.csv").then(data => {
         && d.injury != 0
     );
 
-    console.log("Clean bar data: ", cleanBarData);
-
     // 3.b Group by [director] & aggregate [score]
     const barMap = d3.rollup(cleanBarData
         ,v => d3.sum(v, d => d.injury)
         ,d => d.make
     );
 
-    console.log(barMap)
-    
+
     // 3.c Sort & get top 6
     const barFinalArray = Array.from(barMap // conver to array
         ,([make, injury]) => ({ make, injury })
-    );
+    ).sort((b, a) => a.injury - b.injury);
+
+    
 
     console.log("Final bar data: ", barFinalArray);
 
@@ -444,13 +389,6 @@ d3.csv("aircraft_incidents.csv").then(data => {
         .call(d3.axisBottom(xMake).tickFormat(d => d));
 
 
-
-    // 6: ADD AXES
-    // 6.a: x-axis
-
-
-
-
     // 4.b: PLOT DATA FOR CHART 2
     svg2_bar.selectAll("rect")
     .data(barFinalArray)
@@ -469,9 +407,6 @@ d3.csv("aircraft_incidents.csv").then(data => {
 
 
     // 5.b: ADD AXES FOR CHART 
-
-    
-
     svg2_bar.append("g") // y-axis
     .call(d3.axisLeft(yInjury));
 
@@ -483,18 +418,12 @@ d3.csv("aircraft_incidents.csv").then(data => {
     svg2_bar.append("g")
     .call(d3.axisLeft(yInjury));
 
-    // 6.b: ADD LABELS FOR CHART 2
-    // svg2_bar.append("text")
-    //     .attr("class", "title")
-    //     .attr("x", width / 2)
-    //     .attr("y", -margin.top / 2)
-    //     .text("Top 6 Director's IMDb Scores");
 
-     svg2_bar.append("text")
-        .attr("class", "axis-label")
-        .attr("x", width / 2)
-        .attr("y", height + (margin.bottom / 2) + 10)
-        .text("Manufacturers");
+    svg2_bar.append("text")
+    .attr("class", "axis-label")
+    .attr("x", width / 2)
+    .attr("y", height + (margin.bottom / 2) + 10)
+    .text("Manufacturers");
 
 
     svg2_bar.append("text")
