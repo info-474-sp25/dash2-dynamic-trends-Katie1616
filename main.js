@@ -42,34 +42,36 @@ d3.csv("aircraft_incidents.csv").then(data => {
         d.make = d.Make;
         d.injury = d.Total_Serious_Injuries
     });
-    // Check reformated data 
-    console.log(data);
 
-    // GROUP DATA
-    const groupedData2 = d3.groups(data, d => d.year)
-        .map(([year, entries]) => ({
-            year, 
-            fatalities: d3.sum(entries, e => e.fatalities)
-        }));
-    // Check grouped data 
-    console.log(groupedData2);
 
-    // PIVOT DATA 
-    const pivotedData2 = groupedData2.flatMap(({ year, fatalities }) => [
-                {year, fatalities: fatalities}
-            ]);
-    // Check pivoted data 
-    //console.log("Final pivoted data:", pivotedData2);
+    const  categories = d3.rollup(data, 
+        v => d3.rollup(v, 
+                values => d3.sum(values, d => d.fatalities),
+                d => d.year 
+            ),
+        d => d.make 
+    );
+    
+    const yearCounts = Array.from(categories.values())
+        .map(categoryMap => Array.from(categoryMap.values()));
 
+    const pivotedData2 = [];
+    categories.forEach((yearMap, make) => {
+        yearMap.forEach((fatalities, year) => {
+            pivotedData2.push({ year, fatalities, make });
+        });
+    });
+
+    filteredFlattenedData = pivotedData2.filter(d => d.make === "Boeing");
 
     let xYear = d3.scaleLinear()
-    .domain([1995, d3.max(pivotedData2, d => d.year)])
+    .domain([1995, d3.max(filteredFlattenedData, d => d.year)])
     .range([0, width]); // START low, INCREASE
         
     
     // 4.b: Y scale (Gross)
     let yFatalilities = d3.scaleLinear()
-        .domain([0, d3.max(pivotedData2, d => d.fatalities)])
+        .domain([0, d3.max(filteredFlattenedData, d => d.fatalities)])
         .range([height,0]); // START high, DECREASE
 
     // 4.c: Define line generator for plotting line
@@ -77,9 +79,17 @@ d3.csv("aircraft_incidents.csv").then(data => {
         .x(d => xYear(d.year))
         .y(d => yFatalilities(d.fatalities));
 
-    svg1_line.append("path")
-        .datum(pivotedData2)
-        .attr("d", line)
+
+    // Draw line with data()
+    svg1_line.selectAll('path.data-line') // Select all paths with the class 'line'
+        .data([filteredFlattenedData]) // Bind the entire lineData array as a single element
+        .enter()
+        .append("path")
+        .attr("class", "data-line")
+        .attr("d", d3.line()
+                .x(d => xYear(d.year))
+                .y(d => yFatalilities(d.fatalities))
+        ) 
         .attr("stroke", "steelblue")
         .attr("stroke-width", 5)
         .attr("fill", "none");
@@ -115,32 +125,32 @@ d3.csv("aircraft_incidents.csv").then(data => {
 
 
     // 7.a: ADD INTERACTIVITY FOR CHART 1
-     // // Tooltip
-     const tooltip = d3.select("body") // Create tooltip
-     .append("div")
-     .attr("class", "tooltip")
-     .style("position", "absolute")
-     .style("visibility", "hidden")
-     .style("background", "rgba(0, 0, 0, 0.7)")
-     .style("color", "white")
-     .style("padding", "10px")
-     .style("border-radius", "5px")
-     .style("font-size", "12px");
+        // // Tooltip
+        const tooltip = d3.select("body") // Create tooltip
+        .append("div")
+        .attr("class", "data-point")
+        .style("position", "absolute")
+        .style("visibility", "hidden")
+        .style("background", "rgba(0, 0, 0, 0.7)")
+        .style("color", "white")
+        .style("padding", "10px")
+        .style("border-radius", "5px")
+        .style("font-size", "12px");
 
- svg1_line.selectAll(".data-point") // Create tooltip events
-     .data(pivotedData2) 
-     .enter()
-     .append("circle")
-     .attr("class", "data-point")
-     .attr("cx", d => xYear(d.year))
-     .attr("cy", d => yFatalilities(d.fatalities))
-     .attr("r", 25)
-     .style("fill", "steelblue")
-     .style("opacity", 0)  // Make circles invisible by default
+    svg1_line.selectAll(".data-point") // Create tooltip events
+        .data(filteredFlattenedData) 
+        .enter()
+        .append("circle")
+        .attr("class", "data-point")
+        .attr("cx", d => xYear(d.year))
+        .attr("cy", d => yFatalilities(d.fatalities))
+        .attr("r", 25)
+        .style("fill", "steelblue")
+        .style("opacity", 0)  // Make circles invisible by default
      // --- MOUSEOVER ---
      .on("mouseover", function(event, d) {
          tooltip.style("visibility", "visible")
-             .html(`<strong>Year:</strong> ${d.year} <br><strong>Fatalities:</strong> ${d.fatalities}`)
+             .html(`<strong>Manufacturer:</strong> ${d.make} <br><strong>Year:</strong> ${d.year} <br><strong>Fatalities:</strong> ${d.fatalities}`)
              .style("top", (event.pageY + 10) + "px") // Position relative to pointer
              .style("left", (event.pageX + 10) + "px");
 
@@ -185,14 +195,16 @@ d3.csv("aircraft_incidents.csv").then(data => {
 
             return trendlineData;
         };
-    
-        // T3.2: Function to draw the trendline if the checkbox is checked
-        function drawTrendline() {
-            // T3.3: Set-up data
-            // Filter data based on the selected category (D6.1: Make selected category dynamic)
-    
-            const trendlineData = linearRegression(pivotedData2);
 
+        function drawTrendline(selectedCategory) {
+            // T2.3: Set-up data
+            // Filter data based on the selected category
+            // D6.1: Make selected category dynamic
+            const filteredData = pivotedData2.filter(d => d.make === selectedCategory);
+    
+            // Calculate trendline
+            const trendlineData = linearRegression(filteredData);
+    
             // T2.4: Remove the previous trendline if it exists
             svg1_line.selectAll(".trendline").remove();
     
@@ -207,24 +219,110 @@ d3.csv("aircraft_incidents.csv").then(data => {
                 .attr("fill", "none")
                 .attr("stroke", "gray")
                 .attr("stroke-width", 2)
-                .attr("stroke-dasharray", "5,5");
+                .attr("stroke-dasharray", "5,5");     
         }
     
-        // T4: Manually draw trendline
+        function updateChart(selectedCategory) {
+            // D3.2: Filter the data based on the selected category
+            var selectedCategoryData = pivotedData2.filter(function(d) {
+                return d.make === selectedCategory;
+            });
+            
+            // .3: Remove existing lines
+            // D3.3: Remove existing lines
+            svg1_line.selectAll(".data-line").remove();  // Remove previous lines
+    
+            // D6.3: Remove the previous trendline
+            svg1_line.selectAll(".trendline").remove(); // Remove the previous trendline
+            
+            // remove tooltip
+            svg1_line.selectAll(".data-point").remove();
+            
+    
+            // .4: Redraw lines
+            // D3.4: Redraw line based on selected category data
+            svg1_line.selectAll(".data-line")
+                .data([selectedCategoryData]) // Bind the filtered data as a single line
+                .enter()
+                .append("path")
+                .attr("class", "data-line")
+                .attr("d", d3.line()
+                    .x(d => xYear(d.year))
+                    .y(d => yFatalilities(d.fatalities))
+                )
+                .attr("stroke", "steelblue")
+                .attr("stroke-width", 5)
+                .attr("fill", "none");
+    
+            // D6.4: Redraw the trendline automatically after the category changes
+            if (d3.select("#trendline-toggle").property("checked")) { // If checkbox checked…
+                drawTrendline(selectedCategory); // …draw the trendline
+            }
+          
+            svg1_line.selectAll(".data-point") // Create tooltip events
+            .data(selectedCategoryData) // Bind only the filtered 
+            //.data([selectedCategoryData]) // D7: Bind only to category selected by dropdown menu
+            .enter()
+            .append("circle")
+            .attr("class", "data-point")
+            .attr("cx", d => xYear(d.year))
+            .attr("cy", d => yFatalilities(d.fatalities))
+            .attr("r", 25)
+            .style("fill", "steelblue")
+            .style("opacity", 0)  // Make circles invisible by default
+            // --- MOUSEOVER ---
+            .on("mouseover", function(event, d) {
+                tooltip.style("visibility", "visible")
+                    .html(`<strong>Manufacturer:</strong> ${d.make} <br><strong>Year:</strong> ${d.year} <br><strong>Fatalities:</strong> ${d.fatalities}`)
+                    .style("top", (event.pageY + 10) + "px") // Position relative to pointer
+                    .style("left", (event.pageX + 10) + "px");
+    
+                // Create the large circle at the hovered point
+                svg1_line.append("circle")
+                    .attr("class", "hover-circle")
+                    .attr("cx", xYear(d.year))  // Position based on the xScale (year)
+                    .attr("cy", yFatalilities(d.fatalities)) // Position based on the yScale (count)
+                    .attr("r", 6)  // Radius of the large circle
+                    .style("fill", "steelblue") // Circle color
+                    .style("stroke-width", 2);
+            })
+            // --- MOUSEOUT ---
+            .on("mouseout", function() {
+                tooltip.style("visibility", "hidden");
+    
+                // Remove the hover circle when mouseout occurs
+                svg1_line.selectAll(".hover-circle").remove();
+    
+                // Make the circle invisible again
+                d3.select(this).style("opacity", 0);  // Reset opacity to 0 when not hovering
+            });
+    
+        }
+    
+        
+        // 5: EVENT LISTENERS
+        // T5.1: Event listener for trendline toggle
         d3.select("#trendline-toggle").on("change", function() {
             // T5.2: Get whether the checkbox is checked
             const isChecked = d3.select(this).property("checked");
             // D6.2: Get the current selected category
-           // const selectedCategory = d3.select("#categorySelect").property("value");
+            const selectedCategory = d3.select("#categorySelect").property("value");
             // T5.3: Show or hide the trendline based on the checkbox state
             if (isChecked) {
                 // D6.2: Draw the trendline for the selected category
-                drawTrendline(pivotedData2);
+                drawTrendline(selectedCategory);
             } else {
                 svg1_line.selectAll(".trendline").remove(); // Remove the trendline if the checkbox is unchecked
             }
         });
-
+    
+    
+        // D5: Event listener for when the dropdown selection changes
+        d3.select("#categorySelect").on("change", function() {
+            var selectedCategory = d3.select(this).property("value");
+            updateChart(selectedCategory); // Update the chart based on the selected option
+        });      
+    
 
     // ==========================================
     //         CHART 2 (if applicable)
@@ -240,23 +338,19 @@ d3.csv("aircraft_incidents.csv").then(data => {
         && d.injury != 0
     );
 
-    console.log("Clean bar data: ", cleanBarData);
-
     // 3.b Group by [director] & aggregate [score]
     const barMap = d3.rollup(cleanBarData
         ,v => d3.sum(v, d => d.injury)
         ,d => d.make
     );
 
-    console.log(barMap)
-    
+
     // 3.c Sort & get top 6
     const barFinalArray = Array.from(barMap // conver to array
         ,([make, injury]) => ({ make, injury })
-    ).sort((b, a) => a.injury - b.injury);;
+    ).sort((b, a) => a.injury - b.injury);
 
-    console.log("Final bar data: ", barFinalArray);
-
+    
     // 4: SCALE AXES
     // 4.a: x-axis (director)
     let xMake = d3.scaleBand() // Use instead of scaleLinear() for bar charts
@@ -287,13 +381,6 @@ d3.csv("aircraft_incidents.csv").then(data => {
         .call(d3.axisBottom(xMake).tickFormat(d => d));
 
 
-
-    // 6: ADD AXES
-    // 6.a: x-axis
-
-
-
-
     // 4.b: PLOT DATA FOR CHART 2
     svg2_bar.selectAll("rect")
     .data(barFinalArray)
@@ -312,9 +399,6 @@ d3.csv("aircraft_incidents.csv").then(data => {
 
 
     // 5.b: ADD AXES FOR CHART 
-
-    
-
     svg2_bar.append("g") // y-axis
     .call(d3.axisLeft(yInjury));
 
@@ -326,18 +410,12 @@ d3.csv("aircraft_incidents.csv").then(data => {
     svg2_bar.append("g")
     .call(d3.axisLeft(yInjury));
 
-    // 6.b: ADD LABELS FOR CHART 2
-    // svg2_bar.append("text")
-    //     .attr("class", "title")
-    //     .attr("x", width / 2)
-    //     .attr("y", -margin.top / 2)
-    //     .text("Top 6 Director's IMDb Scores");
 
-     svg2_bar.append("text")
-        .attr("class", "axis-label")
-        .attr("x", width / 2)
-        .attr("y", height + (margin.bottom / 2) + 10)
-        .text("Manufacturers");
+    svg2_bar.append("text")
+    .attr("class", "axis-label")
+    .attr("x", width / 2)
+    .attr("y", height + (margin.bottom / 2) + 10)
+    .text("Manufacturers");
 
 
     svg2_bar.append("text")
